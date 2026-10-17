@@ -337,6 +337,17 @@ input[type="color"]::-webkit-color-swatch {
   color: #cfe3d8;
 }
 
+/* The agent prompt is prose, so let it wrap instead of scrolling sideways. */
+.snippet.prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.snippet.prose code {
+  font: inherit;
+}
 .footer {
   max-width: 1320px;
   margin: 0 auto;
