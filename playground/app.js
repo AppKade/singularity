@@ -33,6 +33,7 @@ const VISUAL = ["size", "x", "y", "rotation", "speed", "turbulence", "brightness
 const canvas = document.getElementById("preview");
 const form = document.getElementById("controls");
 const snippet = document.querySelector("#snippet code");
+const copyButton = document.getElementById("copy");
 const shared = readHash();
 // Without a size in the link, fit the default to the preview on small screens.
 let settings = normalizeOptions({ size: Math.round(Math.min(DEFAULTS.size, canvas.clientWidth * 0.27)), ...shared });
@@ -118,10 +119,35 @@ ${(source || "// Loading singularity.js…").trim()}
 createSingularity(document.getElementById("singularity"), ${optionsLiteral("")});
 </script>`,
   },
+  agent: {
+    label: "Agent prompt",
+    copy: "Copy prompt",
+    code: () => `Add an animated WebGL black hole background ("Singularity") to this project.
+
+Source: ${CDN}
+Docs: https://github.com/AppKade/singularity
+It is a single, dependency-free ES module that exports createSingularity(canvas, options), which returns { set, pause, play, destroy }.
+
+Do this:
+1. Put it behind the hero (top section) of the main landing page unless I say otherwise, and tell me which file you chose.
+2. Download singularity.js into the project's source (for example src/lib/singularity.js, or wherever this stack keeps client utilities) instead of hot-linking it. Keep its license header intact.
+3. Add a <canvas> absolutely positioned behind the section's content: position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; and a z-index below the content. Size it with CSS only; the module sizes its drawing buffer itself. The canvas is transparent, so the section's background shows through.
+4. Start it once the canvas is mounted, with exactly these options:
+${optionsLiteral("")}
+   - React or Next.js: a client component ("use client") with useRef and useEffect; call destroy() in the effect cleanup.
+   - Vue, Svelte, Astro or plain HTML: start it on mount and call destroy() on unmount where the framework has one.
+   - Never run it during server-side rendering; it needs window and WebGL.
+5. createSingularity throws when WebGL is unavailable. Wrap it in try/catch and keep the section's existing background as the fallback.
+6. Keep the text over it readable (preserve the current contrast; add a subtle gradient scrim only if needed) and make sure the layout doesn't shift.
+7. Keep the attribution: the shader is adapted from "Singularity" by XorDev (https://www.shadertoy.com/view/3csSWB), and singularity.js is licensed CC BY-NC-SA 3.0, which does not allow commercial use. If this project looks commercial, stop and ask me before adding it.
+8. Don't add any npm dependencies. Afterwards, run the project's lint, type-check and build, and tell me the results.`,
+  },
 };
 
 function renderSnippet() {
   snippet.textContent = SNIPPETS[format].code();
+  snippet.parentElement.classList.toggle("prose", format === "agent");
+  copyButton.textContent = SNIPPETS[format].copy ?? "Copy code";
 }
 
 function buildTabs() {
@@ -221,7 +247,7 @@ async function copy(text, button, done) {
   setTimeout(() => (button.textContent = label), 1600);
 }
 
-document.getElementById("copy").addEventListener("click", (event) => copy(snippet.textContent, event.currentTarget, "Copied!"));
+copyButton.addEventListener("click", (event) => copy(snippet.textContent, event.currentTarget, "Copied!"));
 document.getElementById("share").addEventListener("click", (event) => copy(location.href, event.currentTarget, "Link copied"));
 document.getElementById("reset").addEventListener("click", () => update({ ...DEFAULTS }));
 document.getElementById("toggle").addEventListener("click", (event) => {

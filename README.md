@@ -29,6 +29,7 @@ Drop a living, swirling black hole behind your hero section. Tune it in the play
 - 🌌 **Mesmerising look.** A glowing ring with swirling, spiralling wisps, built on XorDev's "Singularity" shader.
 - 🎛️ **Fully tunable.** Size, rotation, position, speed, turbulence, brightness, two colours and an edge fade that blends it into your page.
 - 📋 **Copy and paste.** The playground writes HTML, React or fully self-contained code for your exact settings, and every setup has a shareable link.
+- 🤖 **Agent-ready.** Prefer an AI coding agent? Copy the **Agent prompt** tab and paste it into Claude Code, Cursor, Copilot or similar; it tells the agent exactly how to add the effect with your settings.
 - 🪶 **Tiny and dependency-free.** One ES module, plain WebGL 1, no build step.
 - ♿ **Respectful.** Shows a still frame for `prefers-reduced-motion`, and pauses when the canvas is off-screen or the tab is hidden.
 - 🔋 **Efficient.** Renders below device resolution by default (the effect is soft, so it looks the same) and has a `quality` knob.
