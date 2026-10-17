@@ -235,28 +235,61 @@ function update(next, refreshControls = true) {
   renderSnippet();
 }
 
-async function copy(text, button, done) {
-  const label = button.textContent;
-  try {
-    await navigator.clipboard.writeText(text);
-    button.textContent = done;
-  } catch {
-    button.textContent = "Press Ctrl+C";
-    getSelection().selectAllChildren(snippet);
-  }
-  setTimeout(() => (button.textContent = label), 1600);
+const toast = Object.assign(document.createElement("div"), { className: "glass toast", role: "status" });
+document.body.append(toast);
+let toastTimer;
+function notify(message) {
+  // An open modal sits in the top layer, so the toast has to live inside it.
+  const host = document.getElementById("code").open ? document.getElementById("code") : document.body;
+  if (toast.parentElement !== host) host.append(toast);
+  toast.textContent = message;
+  toast.dataset.visible = "";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => delete toast.dataset.visible, 1800);
 }
 
-copyButton.addEventListener("click", (event) => copy(snippet.textContent, event.currentTarget, "Copied!"));
-document.getElementById("share").addEventListener("click", (event) => copy(location.href, event.currentTarget, "Link copied"));
+async function copy(text, done) {
+  try {
+    await navigator.clipboard.writeText(text);
+    notify(done);
+    return true;
+  } catch {
+    notify("Copy failed: select the text and press Ctrl+C");
+    return false;
+  }
+}
+
+copyButton.addEventListener("click", async () => {
+  if (!(await copy(snippet.textContent, format === "agent" ? "Prompt copied" : "Code copied"))) getSelection().selectAllChildren(snippet);
+});
+document.getElementById("share").addEventListener("click", () => copy(location.href, "Link to these settings copied"));
 document.getElementById("reset").addEventListener("click", () => update({ ...DEFAULTS }));
 document.getElementById("toggle").addEventListener("click", (event) => {
   const button = event.currentTarget;
   const paused = button.dataset.paused === "true";
   paused ? effect?.play() : effect?.pause();
   button.dataset.paused = String(!paused);
-  button.textContent = paused ? "Pause" : "Play";
+  button.setAttribute("aria-label", paused ? "Pause animation" : "Play animation");
 });
+
+// Code lives in a modal so the canvas view never scrolls.
+const dialog = document.getElementById("code");
+document.getElementById("open-code").addEventListener("click", () => dialog.showModal());
+document.getElementById("close-code").addEventListener("click", () => dialog.close());
+dialog.addEventListener("click", (event) => {
+  if (event.target === dialog) dialog.close();
+});
+
+// The settings panel starts closed on small screens, where it covers the view.
+const panel = document.getElementById("panel");
+const panelToggle = document.getElementById("toggle-panel");
+function showPanel(visible) {
+  panel.toggleAttribute("data-hidden", !visible);
+  panel.inert = !visible;
+  panelToggle.setAttribute("aria-expanded", String(visible));
+}
+panelToggle.addEventListener("click", () => showPanel(panel.hasAttribute("data-hidden")));
+showPanel(!matchMedia("(max-width: 760px)").matches);
 
 buildPresets();
 buildControls();
