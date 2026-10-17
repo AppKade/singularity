@@ -1,0 +1,17 @@
+{
+  "name": "@appkade/singularity",
+  "version": "1.0.0",
+  "description": "An animated WebGL black hole for the web. Zero dependencies.",
+  "type": "module",
+  "main": "singularity.js",
+  "exports": "./singularity.js",
+  "files": ["singularity.js"],
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "start": "python3 -m http.server 8080"
+  },
+  "keywords": ["webgl", "shader", "black-hole", "background", "animation", "canvas"],
+  "repository": "github:AppKade/singularity",
+  "homepage": "https://appkade.github.io/singularity/",
+  "license": "MIT"
+}

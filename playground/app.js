@@ -1,0 +1,246 @@
+import { createSingularity, DEFAULTS, normalizeOptions } from "../singularity.js";
+
+const CDN = "https://appkade.github.io/singularity/singularity.js";
+
+const PRESETS = {
+  Emerald: {},
+  Solar: { core: "#fff4dc", disc: "#ff9a3c", outer: "#5a1a08" },
+  Nebula: { core: "#f6ecff", disc: "#a66bff", outer: "#2a0f55", turbulence: 1.3 },
+  Ice: { core: "#f0fbff", disc: "#5cc8ff", outer: "#0b3150", tilt: 0.4 },
+  Mono: { core: "#ffffff", disc: "#b9c2c6", outer: "#2b3236", turbulence: 0.7 },
+};
+
+const CONTROLS = [
+  { group: "Shape" },
+  { key: "size", label: "Size", min: 40, max: 400, step: 1, unit: "px" },
+  { key: "tilt", label: "Tilt", min: 0, max: 1, step: 0.01 },
+  { key: "rotation", label: "Rotation", min: -180, max: 180, step: 1, unit: "°" },
+  { key: "x", label: "Horizontal position", min: 0, max: 1, step: 0.01 },
+  { key: "y", label: "Vertical position", min: 0, max: 1, step: 0.01 },
+  { group: "Motion" },
+  { key: "speed", label: "Speed", min: 0, max: 3, step: 0.05 },
+  { key: "turbulence", label: "Turbulence", min: 0, max: 2, step: 0.05 },
+  { group: "Look" },
+  { key: "brightness", label: "Brightness", min: 0.2, max: 2.5, step: 0.05 },
+  { key: "core", label: "Core colour", type: "color" },
+  { key: "disc", label: "Disc colour", type: "color" },
+  { key: "outer", label: "Outer colour", type: "color" },
+  { key: "quality", label: "Render quality", min: 0.25, max: 1.5, step: 0.05 },
+];
+
+// Options that the code snippets always spell out; the rest appear only when changed.
+const VISUAL = ["size", "x", "y", "tilt", "rotation", "speed", "turbulence", "brightness", "core", "disc", "outer"];
+
+const canvas = document.getElementById("preview");
+const form = document.getElementById("controls");
+const snippet = document.querySelector("#snippet code");
+const shared = readHash();
+// Without a size in the link, fit the default to the preview on small screens.
+let settings = normalizeOptions({ size: Math.round(Math.min(DEFAULTS.size, canvas.clientWidth * 0.27)), ...shared });
+let format = "html";
+let source = "";
+let effect;
+
+try {
+  effect = createSingularity(canvas, settings);
+} catch {
+  document.getElementById("fallback").hidden = false;
+}
+
+function readHash() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const options = {};
+  for (const [key, value] of params) {
+    if (!(key in DEFAULTS)) continue;
+    options[key] = typeof DEFAULTS[key] === "number" ? Number(value) : value.startsWith("#") ? value : `#${value}`;
+  }
+  return options;
+}
+
+function writeHash() {
+  const params = new URLSearchParams();
+  for (const key of [...VISUAL, "quality"])
+    if (settings[key] !== DEFAULTS[key]) params.set(key, String(settings[key]).replace(/^#/, ""));
+  history.replaceState(null, "", params.size ? `#${params}` : location.pathname);
+}
+
+function format3(value) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(3)));
+}
+
+function optionsLiteral(indent) {
+  const keys = [...VISUAL, ...(settings.quality !== DEFAULTS.quality ? ["quality"] : [])];
+  const lines = keys.map((key) => {
+    const value = settings[key];
+    return `${indent}  ${key}: ${typeof value === "number" ? format3(value) : JSON.stringify(value)},`;
+  });
+  return `{\n${lines.join("\n")}\n${indent}}`;
+}
+
+const SNIPPETS = {
+  html: {
+    label: "HTML",
+    code: () => `<canvas id="singularity" style="width: 100%; height: 480px"></canvas>
+
+<script type="module">
+  import { createSingularity } from "${CDN}";
+
+  createSingularity(document.getElementById("singularity"), ${optionsLiteral("  ")});
+</script>`,
+  },
+  react: {
+    label: "React",
+    code: () => `// Save singularity.js next to this file (download it from the playground).
+import { useEffect, useRef } from "react";
+import { createSingularity } from "./singularity.js";
+
+const OPTIONS = ${optionsLiteral("")};
+
+export function Singularity({ style, ...props }) {
+  const canvas = useRef(null);
+
+  useEffect(() => {
+    const effect = createSingularity(canvas.current, OPTIONS);
+    return () => effect.destroy();
+  }, []);
+
+  return <canvas ref={canvas} style={{ width: "100%", height: 480, ...style }} {...props} />;
+}`,
+  },
+  standalone: {
+    label: "Self-contained",
+    code: () => `<canvas id="singularity" style="width: 100%; height: 480px"></canvas>
+
+<script type="module">
+${(source || "// Loading singularity.js…").trim()}
+
+createSingularity(document.getElementById("singularity"), ${optionsLiteral("")});
+</script>`,
+  },
+};
+
+function renderSnippet() {
+  snippet.textContent = SNIPPETS[format].code();
+}
+
+function buildTabs() {
+  const tabs = document.getElementById("tabs");
+  for (const [id, { label }] of Object.entries(SNIPPETS)) {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.role = "tab";
+    tab.textContent = label;
+    tab.setAttribute("aria-selected", String(id === format));
+    tab.addEventListener("click", () => {
+      format = id;
+      for (const other of tabs.children) other.setAttribute("aria-selected", String(other === tab));
+      renderSnippet();
+    });
+    tabs.append(tab);
+  }
+}
+
+function buildControls() {
+  let group;
+  for (const control of CONTROLS) {
+    if (control.group) {
+      group = document.createElement("fieldset");
+      group.innerHTML = `<legend>${control.group}</legend>`;
+      form.append(group);
+      continue;
+    }
+    const id = `opt-${control.key}`;
+    const row = document.createElement("div");
+    row.className = control.type === "color" ? "field color" : "field";
+    if (control.type === "color") {
+      row.innerHTML = `<label for="${id}">${control.label}</label><input id="${id}" name="${control.key}" type="color" />`;
+    } else {
+      row.innerHTML = `<label for="${id}">${control.label}<output for="${id}"></output></label><input id="${id}" name="${control.key}" type="range" min="${control.min}" max="${control.max}" step="${control.step}" />`;
+    }
+    group.append(row);
+  }
+  form.addEventListener("input", (event) => {
+    const input = event.target;
+    const value = input.type === "range" ? Number(input.value) : input.value;
+    update({ [input.name]: value }, false);
+  });
+}
+
+function syncControls() {
+  for (const control of CONTROLS) {
+    if (!control.key) continue;
+    const input = form.elements[control.key];
+    input.value = settings[control.key];
+    const output = input.parentElement.querySelector("output");
+    if (output) output.textContent = `${format3(settings[control.key])}${control.unit ?? ""}`;
+  }
+}
+
+function buildPresets() {
+  const list = document.getElementById("presets");
+  for (const [name, preset] of Object.entries(PRESETS)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "preset";
+    const colors = { ...DEFAULTS, ...preset };
+    button.style.setProperty("--swatch", `radial-gradient(circle at 50% 50%, #000 32%, ${colors.core} 36%, ${colors.disc} 50%, ${colors.outer} 72%, transparent 74%)`);
+    button.innerHTML = `<span class="swatch" aria-hidden="true"></span>${name}`;
+    button.addEventListener("click", () => update({ ...pick(DEFAULTS, ["core", "disc", "outer", "turbulence", "tilt"]), ...preset }));
+    list.append(button);
+  }
+}
+
+function pick(object, keys) {
+  return Object.fromEntries(keys.map((key) => [key, object[key]]));
+}
+
+function update(next, refreshControls = true) {
+  settings = normalizeOptions({ ...settings, ...next });
+  effect?.set(settings);
+  if (refreshControls) syncControls();
+  else {
+    const [key] = Object.keys(next);
+    const control = CONTROLS.find((c) => c.key === key);
+    const output = form.elements[key]?.parentElement.querySelector("output");
+    if (output) output.textContent = `${format3(settings[key])}${control.unit ?? ""}`;
+  }
+  writeHash();
+  renderSnippet();
+}
+
+async function copy(text, button, done) {
+  const label = button.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = done;
+  } catch {
+    button.textContent = "Press Ctrl+C";
+    getSelection().selectAllChildren(snippet);
+  }
+  setTimeout(() => (button.textContent = label), 1600);
+}
+
+document.getElementById("copy").addEventListener("click", (event) => copy(snippet.textContent, event.currentTarget, "Copied!"));
+document.getElementById("share").addEventListener("click", (event) => copy(location.href, event.currentTarget, "Link copied"));
+document.getElementById("reset").addEventListener("click", () => update({ ...DEFAULTS }));
+document.getElementById("toggle").addEventListener("click", (event) => {
+  const button = event.currentTarget;
+  const paused = button.dataset.paused === "true";
+  paused ? effect?.play() : effect?.pause();
+  button.dataset.paused = String(!paused);
+  button.textContent = paused ? "Pause" : "Play";
+});
+
+buildPresets();
+buildControls();
+buildTabs();
+syncControls();
+renderSnippet();
+
+fetch(new URL("../singularity.js", import.meta.url))
+  .then((response) => response.text())
+  .then((text) => {
+    source = text;
+    renderSnippet();
+  })
+  .catch(() => {});
