@@ -1,1 +1,139 @@
-# singularity
+<div align="center">
+
+<img src="playground/favicon.svg" alt="" width="64" height="64" />
+
+# Singularity
+
+**An animated WebGL black hole for the web.**
+
+Drop a living, swirling black hole behind your hero section. Tune it in the playground, copy the code, done. Zero dependencies, one file, MIT licensed.
+
+[![Deploy](https://github.com/AppKade/singularity/actions/workflows/pages.yml/badge.svg)](https://github.com/AppKade/singularity/actions/workflows/pages.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-35d48e.svg)](LICENSE)
+[![Dependencies: none](https://img.shields.io/badge/dependencies-none-35d48e.svg)](singularity.js)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-35d48e.svg)](#-contributing)
+
+[**Open the playground**](https://appkade.github.io/singularity/) · [**Report a bug**](https://github.com/AppKade/singularity/issues/new) · [**Suggest an idea**](https://github.com/AppKade/singularity/issues/new)
+
+<br />
+
+<a href="https://appkade.github.io/singularity/">
+  <img src="docs/playground.jpg" alt="The Singularity playground: a green black hole with a tilted, swirling accretion disc, next to sliders for size, tilt, motion and colours." width="100%" />
+</a>
+
+</div>
+
+## ✨ Features
+
+- 🌌 **Real black-hole look.** A tilted accretion disc that passes in front of the shadow, light bent over the top, a thin photon ring, and gas that orbits faster near the centre.
+- 🎛️ **Fully tunable.** Size, tilt, rotation, position, speed, turbulence, brightness and three colours.
+- 📋 **Copy and paste.** The playground writes HTML, React or fully self-contained code for your exact settings, and every setup has a shareable link.
+- 🪶 **Tiny and dependency-free.** One ES module, plain WebGL 1, no build step.
+- ♿ **Respectful.** Shows a still frame for `prefers-reduced-motion`, and pauses when the canvas is off-screen or the tab is hidden.
+- 🔋 **Efficient.** Renders below device resolution by default (the effect is soft, so it looks the same) and has a `quality` knob.
+
+## 🚀 Quick start
+
+The fastest way: open the [playground](https://appkade.github.io/singularity/), pick a look and press **Copy code**.
+
+Or by hand:
+
+```html
+<canvas id="singularity" style="width: 100%; height: 480px"></canvas>
+
+<script type="module">
+  import { createSingularity } from "https://appkade.github.io/singularity/singularity.js";
+
+  createSingularity(document.getElementById("singularity"), {
+    size: 160,
+    tilt: 0.28,
+    disc: "#35d48e",
+  });
+</script>
+```
+
+Size the canvas with CSS; the drawing buffer follows it automatically. The canvas is transparent, so whatever is behind it shows through the empty space.
+
+### React
+
+Download [`singularity.js`](singularity.js) into your project, then:
+
+```jsx
+import { useEffect, useRef } from "react";
+import { createSingularity } from "./singularity.js";
+
+export function Singularity({ options, style, ...props }) {
+  const canvas = useRef(null);
+
+  useEffect(() => {
+    const effect = createSingularity(canvas.current, options);
+    return () => effect.destroy();
+  }, []);
+
+  return <canvas ref={canvas} style={{ width: "100%", height: 480, ...style }} {...props} />;
+}
+```
+
+## 🎛️ Options
+
+| Option | Default | Description |
+| :-- | :-- | :-- |
+| `size` | `160` | Radius of the shadow's ring, in CSS pixels. The disc extends roughly 3× further. |
+| `x` | `0.5` | Horizontal centre, as a fraction of the canvas width. |
+| `y` | `0.5` | Vertical centre, as a fraction of the canvas height (from the top). |
+| `tilt` | `0.28` | Disc inclination: `0` is edge-on, `1` is face-on. |
+| `rotation` | `-12` | Disc rotation in degrees. |
+| `speed` | `1` | Swirl speed; `0` freezes the motion. |
+| `turbulence` | `1` | How stormy the gas looks, from `0` to `2`. |
+| `brightness` | `1` | Overall exposure, from `0.1` to `3`. |
+| `core` | `"#eafff3"` | Colour of the hottest, innermost gas and the photon ring. |
+| `disc` | `"#35d48e"` | Main disc colour. |
+| `outer` | `"#0b4f43"` | Colour of the cool outer edge. |
+| `quality` | `0.75` | Render scale relative to device pixels. Lower is faster. |
+| `respectReducedMotion` | `true` | Show a still frame when the visitor prefers reduced motion. |
+
+## 🧩 API
+
+`createSingularity(canvas, options)` returns a controller:
+
+| Member | Description |
+| :-- | :-- |
+| `set(options)` | Merge new options into the running effect. |
+| `options` | The current, normalised options. |
+| `pause()` / `play()` | Stop or resume the animation (a still frame stays visible). |
+| `destroy()` | Stop rendering, remove observers and release the WebGL context. |
+
+It throws if WebGL is unavailable, so wrap it in `try` if you need a fallback.
+
+## 🛠️ Development
+
+There's no build step. Serve the folder and open it in a browser:
+
+```sh
+git clone https://github.com/AppKade/singularity.git
+cd singularity
+npm start        # python3 -m http.server 8080
+npm test         # node --test
+```
+
+| Path | What lives there |
+| :-- | :-- |
+| `singularity.js` | The component: shader, options and controller. |
+| `index.html`, `playground/` | The playground site deployed to GitHub Pages. |
+| `tests/` | Unit tests for option handling. |
+| `.github/workflows/pages.yml` | Tests every PR and deploys `main` to GitHub Pages. |
+
+## 🤝 Contributing
+
+Contributions are welcome: new presets, shader improvements, framework examples, docs and bug fixes. Open an issue first for large changes, keep each pull request focused, and run `npm test` before you submit. For visual changes, include before-and-after screenshots.
+
+Singularity is an [AppKade Open](https://open.appkade.lk) project.
+
+## 📄 License
+
+[MIT](LICENSE) © AppKade. The shader is an original implementation.
+
+<div align="center">
+<br />
+<sub>If Singularity makes your page look better, consider giving it a ⭐</sub>
+</div>
