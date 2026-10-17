@@ -19,7 +19,7 @@ Drop a living, swirling black hole behind your hero section. Tune it in the play
 <br />
 
 <a href="https://appkade.github.io/singularity/">
-  <img src="docs/playground.jpg" alt="The Singularity playground: a glowing green black hole with swirling wisps, next to sliders for size, motion and colours." width="100%" />
+  <img src="docs/playground.jpg" alt="The Singularity playground: a full-screen glowing green black hole with a floating settings panel and a toolbar for sharing and copying the code." width="100%" />
 </a>
 
 </div>
@@ -120,7 +120,7 @@ npm test         # node --test
 | Path | What lives there |
 | :-- | :-- |
 | `singularity.js` | The component: shader, options and controller (CC BY-NC-SA 3.0). |
-| `index.html`, `playground/` | The playground site deployed to GitHub Pages. |
+| `index.html`, `playground/` | The full-screen playground deployed to GitHub Pages. |
 | `tests/` | Unit tests for option handling. |
 | `.github/workflows/pages.yml` | Tests every PR and deploys `main` to GitHub Pages. |
 
