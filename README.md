@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="playground/favicon.svg" alt="" width="64" height="64" />
+<img src="playground/icon.svg" alt="" width="64" height="64" />
 
 # Singularity
 
@@ -19,7 +19,7 @@ Drop a living, swirling black hole behind your hero section. Tune it in the play
 <br />
 
 <a href="https://appkade.github.io/singularity/">
-  <img src="docs/playground.jpg" alt="The Singularity playground: a full-screen glowing green black hole with a floating settings panel and a toolbar for sharing and copying the code." width="100%" />
+  <img src="docs/playground-canvas.jpg" alt="The Singularity playground: a full-screen glowing green black hole with a floating settings panel and a toolbar for sharing and copying the code." width="100%" />
 </a>
 
 </div>
