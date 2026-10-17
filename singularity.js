@@ -1,20 +1,21 @@
 /*!
  * Singularity: an animated WebGL black hole for the web.
- * https://github.com/AppKade/singularity · MIT License · © AppKade
+ * https://github.com/AppKade/singularity
+ * Shader adapted from "Singularity" by XorDev (https://www.shadertoy.com/view/3csSWB).
+ * This file is licensed CC BY-NC-SA 3.0: https://creativecommons.org/licenses/by-nc-sa/3.0/
  */
 
 export const DEFAULTS = Object.freeze({
-  size: 160, // radius of the event horizon's lensed ring, in CSS pixels
-  x: 0.5, // centre of the hole, as a fraction of the canvas width
-  y: 0.5, // centre of the hole, as a fraction of the canvas height (from the top)
-  tilt: 0.28, // disc inclination: 0 is edge-on, 1 is face-on
-  rotation: -12, // disc rotation in degrees
+  size: 170, // radius of the bright ring, in CSS pixels
+  x: 0.5, // centre, as a fraction of the canvas width
+  y: 0.5, // centre, as a fraction of the canvas height (from the top)
+  rotation: 0, // rotation of the whole effect, in degrees
   speed: 1, // swirl speed multiplier; 0 freezes the motion
-  turbulence: 1, // how stormy the accretion disc looks
+  turbulence: 1, // strength of the swirling waves
   brightness: 1, // overall exposure
-  core: "#eafff3", // hottest, innermost colour
-  disc: "#35d48e", // main disc colour
-  outer: "#0b4f43", // cool outer edge colour
+  primary: "#38ff8c", // colour of the bright side of the disc
+  secondary: "#298c7a", // colour of the dimmer side of the disc
+  fade: 1, // soft fade towards the edges: 0 is none, 1 blends into the page
   quality: 0.75, // render scale relative to device pixels (lower is faster)
   respectReducedMotion: true, // render a still frame for prefers-reduced-motion
 });
@@ -24,95 +25,54 @@ attribute vec2 position;
 void main() { gl_Position = vec4(position, 0.0, 1.0); }
 `;
 
+// Adapted from "Singularity" by XorDev (https://www.shadertoy.com/view/3csSWB),
+// licensed CC BY-NC-SA 3.0. Changes: WebGL 1 port, parameters for position,
+// size, rotation, speed, turbulence and exposure, two-colour tint, edge fade.
 const FRAGMENT = `
 precision highp float;
-uniform vec2 resolution;
 uniform vec2 center;
-uniform float radius;
+uniform float unit;
 uniform float time;
-uniform float tilt;
 uniform float rotation;
 uniform float turbulence;
 uniform float brightness;
-uniform vec3 coreColor;
-uniform vec3 discColor;
-uniform vec3 outerColor;
-
-float hash(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
-}
-
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
-             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-
-float fbm(vec2 p) {
-  float value = 0.0;
-  float amplitude = 0.5;
-  for (int i = 0; i < 5; i++) {
-    value += amplitude * noise(p);
-    p = mat2(1.6, 1.2, -1.2, 1.6) * p;
-    amplitude *= 0.5;
-  }
-  return value;
-}
-
-// Gas orbiting at radius r: inner rings spin faster (roughly Keplerian),
-// sampled on a circle so the angle never shows a seam.
-float gas(float angle, float r, float seed) {
-  float swirl = angle + time * 0.9 / pow(max(r, 0.6), 1.5) + log(r) * 2.2;
-  vec2 ring = vec2(cos(swirl), sin(swirl)) * (2.2 + r * 0.6);
-  float streaks = fbm(ring * (1.0 + turbulence * 0.8) + vec2(seed, r * 3.0));
-  return mix(0.55, 0.25 + streaks * 1.5, clamp(turbulence, 0.0, 2.0) * 0.5);
-}
-
-vec3 palette(float heat) {
-  vec3 warm = mix(outerColor, discColor, smoothstep(0.0, 0.55, heat));
-  return mix(warm, coreColor, smoothstep(0.55, 1.0, heat));
-}
+uniform float fade;
+uniform vec3 primary;
+uniform vec3 secondary;
 
 void main() {
-  vec2 p = (gl_FragCoord.xy - center) / radius;
-  float c = cos(rotation), s = sin(rotation);
-  p = mat2(c, -s, s, c) * p;
-  float r = length(p);
-  float t = max(tilt, 0.04);
-
-  // The disc plane, squashed by the viewing angle.
-  vec2 d = vec2(p.x, p.y / t);
-  float dr = length(d);
-  float da = atan(d.y, d.x);
-  float band = smoothstep(1.1, 1.5, dr) * (1.0 - smoothstep(1.9, 3.6, dr));
-  float heat = clamp(1.05 - (dr - 1.2) / 2.0, 0.0, 1.0);
-  // The side rotating towards us is brighter (relativistic beaming).
-  float beam = 0.55 + 0.45 * cos(da + 2.4);
-  float discLight = band * gas(da, dr, 0.0) * (0.3 + beam) * 0.8;
-  vec3 disc = palette(heat) * discLight;
-
-  // Light from behind the hole bends over and under it into a halo.
-  float halo = exp(-pow((r - 1.16) / (0.12 + 0.06 * turbulence), 2.0));
-  halo *= gas(atan(p.y, p.x), r * 1.4, 7.0) * (0.35 + 0.65 * smoothstep(-0.6, 0.9, p.y));
-  vec3 lensed = palette(0.7) * halo * 0.75;
-
-  // A thin photon ring hugs the shadow.
-  float ring = exp(-pow((r - 1.025) / 0.018, 2.0)) * 0.55;
-  vec3 photon = coreColor * ring;
-
-  float shadow = smoothstep(0.96, 1.02, r);
-  // The near half of the disc passes in front of the shadow; the far half hides behind it.
-  float front = step(d.y, 0.0);
-  vec3 color = (lensed + photon) * shadow + disc * mix(shadow, 1.0, front);
-  color += discColor * exp(-r * 0.9) * 0.08 * shadow;
-
-  color = 1.0 - exp(-color * 1.15 * brightness);
-  float alpha = clamp(max(max(color.r, color.g), color.b) * 1.15, 0.0, 1.0);
-  gl_FragColor = vec4(color, alpha);
+  float i = 0.2;
+  vec2 p = (gl_FragCoord.xy - center) / unit;
+  float cr = cos(rotation), sr = sin(rotation);
+  p = mat2(cr, -sr, sr, cr) * p;
+  vec2 d = vec2(-1.0, 1.0);
+  vec2 b = p - i * d;
+  // Tilt the disc and bend coordinates around the event horizon.
+  vec2 c = p * mat2(1.0, 1.0, d / (0.1 + i / dot(b, b)));
+  float a = dot(c, c);
+  // Logarithmic spiral coordinates for the swirling accretion flow.
+  vec2 v = c * mat2(cos(0.5 * log(a) + time * i + vec4(0.0, 33.0, 11.0, 0.0))) / i;
+  vec2 w = vec2(0.0);
+  for (int n = 0; n < 8; n++) {
+    i += 1.0;
+    v += 0.7 * turbulence * sin(v.yx * i + time) / i + 0.5;
+    w += 1.0 + sin(v);
+  }
+  float disc = length(sin(v / 0.3) * 0.4 + c * (3.0 + d));
+  vec3 tint = exp(c.x * 0.4) * primary + exp(-c.x * 0.7) * secondary;
+  // Mostly shared wave shading, with a little per-channel shimmer, keeps any
+  // palette true to its colours.
+  vec3 waves = mix(vec3((w.x + w.y) * 0.5), w.xyy, 0.25);
+  vec3 color = 1.0 - exp(-tint * brightness
+    / waves
+    / (2.0 + disc * disc / 4.0 - disc)
+    / (0.5 + 1.0 / a)
+    / (0.03 + abs(length(p) - 0.7)));
+  // Fade the wisps out with distance, measured in ring radii.
+  float reach = mix(12.0, 1.3, fade);
+  float edge = 1.0 - smoothstep(reach, reach * 2.2, length(p) / 0.7);
+  color *= edge;
+  gl_FragColor = vec4(color, max(max(color.r, color.g), color.b));
 }
 `;
 
@@ -134,11 +94,11 @@ export function normalizeOptions(options = {}) {
     size: clamp(o.size, 10, 2000, DEFAULTS.size),
     x: clamp(o.x, -1, 2, DEFAULTS.x),
     y: clamp(o.y, -1, 2, DEFAULTS.y),
-    tilt: clamp(o.tilt, 0, 1, DEFAULTS.tilt),
     rotation: clamp(o.rotation, -180, 180, DEFAULTS.rotation),
     speed: clamp(o.speed, 0, 5, DEFAULTS.speed),
     turbulence: clamp(o.turbulence, 0, 2, DEFAULTS.turbulence),
     brightness: clamp(o.brightness, 0.1, 3, DEFAULTS.brightness),
+    fade: clamp(o.fade, 0, 1, DEFAULTS.fade),
     quality: clamp(o.quality, 0.25, 2, DEFAULTS.quality),
   };
 }
@@ -171,7 +131,7 @@ export function createSingularity(canvas, options = {}) {
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
 
   const uniform = {};
-  for (const name of ["resolution", "center", "radius", "time", "tilt", "rotation", "turbulence", "brightness", "coreColor", "discColor", "outerColor"])
+  for (const name of ["center", "unit", "time", "rotation", "turbulence", "brightness", "fade", "primary", "secondary"])
     uniform[name] = gl.getUniformLocation(program, name);
 
   const reduced = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
@@ -186,17 +146,16 @@ export function createSingularity(canvas, options = {}) {
   function draw() {
     const { width, height } = canvas;
     gl.viewport(0, 0, width, height);
-    gl.uniform2f(uniform.resolution, width, height);
     gl.uniform2f(uniform.center, settings.x * width, (1 - settings.y) * height);
-    gl.uniform1f(uniform.radius, settings.size * scale);
+    // The ring sits at 0.7 shader units from the centre.
+    gl.uniform1f(uniform.unit, (settings.size * scale) / 0.7);
     gl.uniform1f(uniform.time, elapsed);
-    gl.uniform1f(uniform.tilt, settings.tilt);
     gl.uniform1f(uniform.rotation, (settings.rotation * Math.PI) / 180);
     gl.uniform1f(uniform.turbulence, settings.turbulence);
     gl.uniform1f(uniform.brightness, settings.brightness);
-    gl.uniform3fv(uniform.coreColor, hexToRgb(settings.core));
-    gl.uniform3fv(uniform.discColor, hexToRgb(settings.disc));
-    gl.uniform3fv(uniform.outerColor, hexToRgb(settings.outer));
+    gl.uniform1f(uniform.fade, settings.fade);
+    gl.uniform3fv(uniform.primary, hexToRgb(settings.primary));
+    gl.uniform3fv(uniform.secondary, hexToRgb(settings.secondary));
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
   const still = () => !playing || !visible || document.hidden || (settings.respectReducedMotion && reduced?.matches);

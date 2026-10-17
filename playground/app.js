@@ -4,16 +4,15 @@ const CDN = "https://appkade.github.io/singularity/singularity.js";
 
 const PRESETS = {
   Emerald: {},
-  Solar: { core: "#fff4dc", disc: "#ff9a3c", outer: "#5a1a08" },
-  Nebula: { core: "#f6ecff", disc: "#a66bff", outer: "#2a0f55", turbulence: 1.3 },
-  Ice: { core: "#f0fbff", disc: "#5cc8ff", outer: "#0b3150", tilt: 0.4 },
-  Mono: { core: "#ffffff", disc: "#b9c2c6", outer: "#2b3236", turbulence: 0.7 },
+  Solar: { primary: "#ff9a3c", secondary: "#8c3a12" },
+  Nebula: { primary: "#b06bff", secondary: "#4a2a8c" },
+  Ice: { primary: "#5cc8ff", secondary: "#2a5f8c" },
+  Mono: { primary: "#e8eef0", secondary: "#6b777c" },
 };
 
 const CONTROLS = [
   { group: "Shape" },
   { key: "size", label: "Size", min: 40, max: 400, step: 1, unit: "px" },
-  { key: "tilt", label: "Tilt", min: 0, max: 1, step: 0.01 },
   { key: "rotation", label: "Rotation", min: -180, max: 180, step: 1, unit: "°" },
   { key: "x", label: "Horizontal position", min: 0, max: 1, step: 0.01 },
   { key: "y", label: "Vertical position", min: 0, max: 1, step: 0.01 },
@@ -22,14 +21,14 @@ const CONTROLS = [
   { key: "turbulence", label: "Turbulence", min: 0, max: 2, step: 0.05 },
   { group: "Look" },
   { key: "brightness", label: "Brightness", min: 0.2, max: 2.5, step: 0.05 },
-  { key: "core", label: "Core colour", type: "color" },
-  { key: "disc", label: "Disc colour", type: "color" },
-  { key: "outer", label: "Outer colour", type: "color" },
+  { key: "primary", label: "Primary colour", type: "color" },
+  { key: "secondary", label: "Secondary colour", type: "color" },
+  { key: "fade", label: "Edge fade", min: 0, max: 1, step: 0.05 },
   { key: "quality", label: "Render quality", min: 0.25, max: 1.5, step: 0.05 },
 ];
 
 // Options that the code snippets always spell out; the rest appear only when changed.
-const VISUAL = ["size", "x", "y", "tilt", "rotation", "speed", "turbulence", "brightness", "core", "disc", "outer"];
+const VISUAL = ["size", "x", "y", "rotation", "speed", "turbulence", "brightness", "primary", "secondary", "fade"];
 
 const canvas = document.getElementById("preview");
 const form = document.getElementById("controls");
@@ -83,6 +82,7 @@ const SNIPPETS = {
     code: () => `<canvas id="singularity" style="width: 100%; height: 480px"></canvas>
 
 <script type="module">
+  // Shader adapted from "Singularity" by XorDev, CC BY-NC-SA 3.0 (non-commercial use only).
   import { createSingularity } from "${CDN}";
 
   createSingularity(document.getElementById("singularity"), ${optionsLiteral("  ")});
@@ -91,6 +91,7 @@ const SNIPPETS = {
   react: {
     label: "React",
     code: () => `// Save singularity.js next to this file (download it from the playground).
+// Shader adapted from "Singularity" by XorDev, CC BY-NC-SA 3.0 (non-commercial use only).
 import { useEffect, useRef } from "react";
 import { createSingularity } from "./singularity.js";
 
@@ -183,9 +184,9 @@ function buildPresets() {
     button.type = "button";
     button.className = "preset";
     const colors = { ...DEFAULTS, ...preset };
-    button.style.setProperty("--swatch", `radial-gradient(circle at 50% 50%, #000 32%, ${colors.core} 36%, ${colors.disc} 50%, ${colors.outer} 72%, transparent 74%)`);
+    button.style.setProperty("--swatch", `radial-gradient(circle at 50% 50%, #000 34%, ${colors.primary} 40%, ${colors.secondary} 66%, transparent 72%)`);
     button.innerHTML = `<span class="swatch" aria-hidden="true"></span>${name}`;
-    button.addEventListener("click", () => update({ ...pick(DEFAULTS, ["core", "disc", "outer", "turbulence", "tilt"]), ...preset }));
+    button.addEventListener("click", () => update({ ...pick(DEFAULTS, ["primary", "secondary"]), ...preset }));
     list.append(button);
   }
 }
