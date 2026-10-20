@@ -1,4 +1,4 @@
-import { createSingularity, DEFAULTS, normalizeOptions } from "../singularity.js";
+import { createSingularity, DEFAULTS, normalizeOptions, hexToRgb } from "../singularity.js";
 
 const CDN = "https://appkade.github.io/singularity/singularity.js";
 
@@ -51,8 +51,14 @@ function readHash() {
   const params = new URLSearchParams(location.hash.slice(1));
   const options = {};
   for (const [key, value] of params) {
-    if (!(key in DEFAULTS)) continue;
-    options[key] = typeof DEFAULTS[key] === "number" ? Number(value) : value.startsWith("#") ? value : `#${value}`;
+    if (!Object.hasOwn(DEFAULTS, key)) continue;
+    if (typeof DEFAULTS[key] === "number") options[key] = Number(value);
+    else if (typeof DEFAULTS[key] === "boolean") {
+      if (value === "true" || value === "false") options[key] = value === "true";
+    } else {
+      const color = value.startsWith("#") ? value : `#${value}`;
+      try { hexToRgb(color); options[key] = color; } catch { /* Ignore malformed shared colours. */ }
+    }
   }
   return options;
 }

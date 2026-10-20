@@ -89,6 +89,9 @@ export function normalizeOptions(options = {}) {
   const o = { ...DEFAULTS, ...options };
   const clamp = (value, min, max, fallback) =>
     Number.isFinite(Number(value)) ? Math.min(max, Math.max(min, Number(value))) : fallback;
+  // Validate colours before acquiring GPU resources or mutating a live effect.
+  hexToRgb(o.primary);
+  hexToRgb(o.secondary);
   return {
     ...o,
     size: clamp(o.size, 10, 2000, DEFAULTS.size),
@@ -108,6 +111,7 @@ export function normalizeOptions(options = {}) {
  * store follows it. Returns controls to update, pause or destroy it.
  */
 export function createSingularity(canvas, options = {}) {
+  let settings = normalizeOptions(options);
   const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false });
   if (!gl) throw new Error("Singularity needs WebGL, which this browser has turned off.");
 
@@ -135,7 +139,7 @@ export function createSingularity(canvas, options = {}) {
     uniform[name] = gl.getUniformLocation(program, name);
 
   const reduced = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
-  let settings = normalizeOptions(options);
+  let destroyed = false;
   let scale = 1;
   let elapsed = 0;
   let previous = 0;
@@ -158,8 +162,9 @@ export function createSingularity(canvas, options = {}) {
     gl.uniform3fv(uniform.secondary, hexToRgb(settings.secondary));
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
-  const still = () => !playing || !visible || document.hidden || (settings.respectReducedMotion && reduced?.matches);
+  const still = () => settings.speed === 0 || !playing || !visible || document.hidden || (settings.respectReducedMotion && reduced?.matches);
   function tick(now) {
+    if (destroyed) return;
     frame = 0;
     elapsed += previous ? (Math.min(now - previous, 50) / 1000) * settings.speed : 0;
     previous = now;
@@ -167,6 +172,7 @@ export function createSingularity(canvas, options = {}) {
     if (!still()) frame = requestAnimationFrame(tick);
   }
   function sync() {
+    if (destroyed) return;
     cancelAnimationFrame(frame);
     frame = 0;
     previous = 0;
@@ -174,6 +180,7 @@ export function createSingularity(canvas, options = {}) {
     if (!still()) frame = requestAnimationFrame(tick);
   }
   function resize() {
+    if (destroyed) return;
     scale = Math.min(devicePixelRatio || 1, 2) * settings.quality;
     canvas.width = Math.max(1, Math.round(canvas.clientWidth * scale));
     canvas.height = Math.max(1, Math.round(canvas.clientHeight * scale));
@@ -195,6 +202,7 @@ export function createSingularity(canvas, options = {}) {
   return {
     /** Merges new options into the running effect. */
     set(next) {
+      if (destroyed) return;
       const quality = settings.quality;
       settings = normalizeOptions({ ...settings, ...next });
       if (settings.quality !== quality) resize();
@@ -204,14 +212,18 @@ export function createSingularity(canvas, options = {}) {
       return { ...settings };
     },
     play() {
+      if (destroyed) return;
       playing = true;
       sync();
     },
     pause() {
+      if (destroyed) return;
       playing = false;
       sync();
     },
     destroy() {
+      if (destroyed) return;
+      destroyed = true;
       cancelAnimationFrame(frame);
       resizer.disconnect();
       watcher.disconnect();
