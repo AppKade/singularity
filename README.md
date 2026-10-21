@@ -102,7 +102,7 @@ export function Singularity({ options, style, ...props }) {
 | `set(options)` | Merge new options into the running effect. |
 | `options` | The current, normalised options. |
 | `pause()` / `play()` | Stop or resume the animation (a still frame stays visible). |
-| `destroy()` | Stop rendering, remove observers and release the WebGL context. |
+| `destroy()` | Stop rendering, remove observers and release the WebGL context. Repeated calls are safe; later controls do nothing. |
 
 It throws if WebGL is unavailable, so wrap it in `try` if you need a fallback.
 
@@ -141,3 +141,5 @@ Thanks to [XorDev](https://www.shadertoy.com/user/Xor) for the original shader.
 <br />
 <sub>If Singularity makes your page look better, consider giving it a ⭐</sub>
 </div>
+
+A speed of `0` draws a still frame without scheduling animation frames. Invalid colors fail before GPU setup or a running update changes state. Malformed colors in shared playground links are ignored.
